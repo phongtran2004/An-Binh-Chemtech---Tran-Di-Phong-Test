@@ -1,0 +1,73 @@
+// Prisma schema for An Bình Chemtech Quotation System
+// Database: SQLite (zero-config, portable, sufficient for SME internal system)
+// Production recommendation: Migrate to PostgreSQL for concurrency & scalability
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Customer {
+  id            String      @id @default(uuid())
+  companyName   String
+  contactPerson String
+  email         String
+  phone         String
+  address       String
+  taxCode       String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  quotations    Quotation[]
+}
+
+model Product {
+  id           String          @id @default(uuid())
+  name         String
+  specification String
+  unit         String
+  defaultPrice Float
+  category     String
+  createdAt    DateTime        @default(now())
+  items        QuotationItem[]
+}
+
+model Quotation {
+  id              String          @id @default(uuid())
+  quotationNumber String          @unique
+  customerId      String
+  customer        Customer        @relation(fields: [customerId], references: [id])
+  status          String          @default("DRAFT") // DRAFT | PENDING | PROCESSING | COMPLETED | FAILED
+  paymentTerms    String          @default("")
+  deliveryTerms   String          @default("")
+  notes           String          @default("")
+  validityDays    Int             @default(30)
+  filePath        String?
+  idempotencyKey  String?         @unique
+  retryCount      Int             @default(0)
+  errorMessage    String?
+  createdBy       String          @default("system")
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  completedAt     DateTime?
+  items           QuotationItem[]
+}
+
+model QuotationItem {
+  id            String    @id @default(uuid())
+  quotationId   String
+  quotation     Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  productId     String?
+  product       Product?  @relation(fields: [productId], references: [id])
+  productName   String
+  specification String    @default("")
+  unit          String
+  quantity      Float
+  unitPrice     Float
+  discount      Float     @default(0)
+  amount        Float     // quantity * unitPrice * (1 - discount/100)
+  sortOrder     Int       @default(0)
+}
